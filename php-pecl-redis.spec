@@ -1,3 +1,11 @@
+# spec file for php-pecl-redis
+#
+# Copyright (c) 2012-2013 Remi Collet
+# License: CC-BY-SA
+# http://creativecommons.org/licenses/by-sa/3.0/
+#
+# Please, preserve the changelog entries
+#
 %{!?php_inidir:  %{expand: %%global php_inidir  %{_sysconfdir}/php.d}}
 %{!?__pecl:      %{expand: %%global __pecl      %{_bindir}/pecl}}
 
