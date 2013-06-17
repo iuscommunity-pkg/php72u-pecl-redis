@@ -12,7 +12,7 @@
 %global pecl_name  redis
 %global with_zts   0%{?__ztsphp:1}
 
-%if 0%{?fedora} >= 18
+%if 0%{?fedora} > 18
 %ifarch ppc64
 # redis have ExcludeArch: ppc64
 %global with_test  0
