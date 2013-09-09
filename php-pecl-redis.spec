@@ -12,7 +12,7 @@
 %global pecl_name  redis
 %global with_zts   0%{?__ztsphp:1}
 
-%if 0%{?fedora} > 18
+%if 0%{?fedora} >= 19
 %ifarch ppc64
 # redis have ExcludeArch: ppc64
 %global with_test  0
@@ -26,8 +26,8 @@
 
 Summary:       Extension for communicating with the Redis key-value store
 Name:          php-pecl-redis
-Version:       2.2.3
-Release:       2%{?dist}
+Version:       2.2.4
+Release:       1%{?dist}
 License:       PHP
 Group:         Development/Languages
 URL:           http://pecl.php.net/package/redis
@@ -228,6 +228,9 @@ fi
 
 
 %changelog
+* Mon Sep 09 2013 Remi Collet <remi@fedoraproject.org> - 2.2.4-1
+- Update to 2.2.4
+
 * Sun Aug 04 2013 Fedora Release Engineering <rel-eng@lists.fedoraproject.org> - 2.2.3-2
 - Rebuilt for https://fedoraproject.org/wiki/Fedora_20_Mass_Rebuild
 
