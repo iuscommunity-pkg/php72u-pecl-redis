@@ -10,14 +10,14 @@
 %{!?__pecl:      %global __pecl      %{_bindir}/pecl}
 %{!?__php:       %global __php       %{_bindir}/php}
 
-%global pecl_name  redis
+%global pecl_name   redis
 %global with_zts    0%{?__ztsphp:1}
 %global with_tests  %{?_with_tests:1}%{!?_with_tests:0}
 
 Summary:       Extension for communicating with the Redis key-value store
 Name:          php-pecl-redis
-Version:       2.2.4
-Release:       2%{?dist}
+Version:       2.2.5
+Release:       1%{?dist}
 License:       PHP
 Group:         Development/Languages
 URL:           http://pecl.php.net/package/redis
@@ -42,7 +42,7 @@ Provides:      php-redis%{?_isa} = %{version}-%{release}
 Provides:      php-pecl(%{pecl_name}) = %{version}
 Provides:      php-pecl(%{pecl_name})%{?_isa} = %{version}
 
-%if 0%{?fedora} < 20
+%if 0%{?fedora} < 20 && 0%{?rhel} < 7
 # Filter private shared object
 %{?filter_provides_in: %filter_provides_in %{_libdir}/.*\.so$}
 %{?filter_setup}
@@ -135,7 +135,7 @@ done
 
 %check
 # simple module load test
-php --no-php-ini \
+%{__php} --no-php-ini \
     --define extension=igbinary.so \
     --define extension=%{buildroot}%{php_extdir}/%{pecl_name}.so \
     --modules | grep %{pecl_name}
@@ -177,7 +177,7 @@ sed -e "s/6379/$port/" -i TestRedis.php
 
 # Run the test Suite
 ret=0
-php --no-php-ini \
+%{__php} --no-php-ini \
     --define extension=igbinary.so \
     --define extension=%{buildroot}%{php_extdir}/%{pecl_name}.so \
     TestRedis.php || ret=1
@@ -218,6 +218,9 @@ fi
 
 
 %changelog
+* Wed Mar 19 2014 Remi Collet <remi@fedoraproject.org> - 2.2.5-1
+- Update to 2.2.5
+
 * Thu Mar 13 2014 Remi Collet <remi@fedoraproject.org> - 2.2.4-2
 - cleanups
 - move doc in pecl_docdir
