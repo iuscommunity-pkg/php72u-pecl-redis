@@ -13,17 +13,27 @@
 %global pecl_name   redis
 %global with_zts    0%{?__ztsphp:1}
 %global with_tests  %{?_with_tests:1}%{!?_with_tests:0}
+%if "%{php_version}" < "5.6"
+# after igbinary
+%global ini_name    %{pecl_name}.ini
+%else
+# after 40-igbinary
+%global ini_name    50-%{pecl_name}.ini
+%endif
 
 Summary:       Extension for communicating with the Redis key-value store
 Name:          php-pecl-redis
 Version:       2.2.5
-Release:       1%{?dist}
+Release:       2%{?dist}
 License:       PHP
 Group:         Development/Languages
 URL:           http://pecl.php.net/package/redis
 Source0:       http://pecl.php.net/get/%{pecl_name}-%{version}.tgz
 # https://github.com/nicolasff/phpredis/issues/332 - missing tests
 Source1:       https://github.com/nicolasff/phpredis/archive/%{version}.tar.gz
+
+# https://github.com/nicolasff/phpredis/pull/447
+Patch0:        %{pecl_name}-php56.patch
 
 BuildRequires: php-devel
 BuildRequires: php-pecl-igbinary-devel
@@ -66,12 +76,16 @@ mv %{pecl_name}-%{version} nts
 # tests folder from github archive
 mv phpredis-%{version}/tests nts/tests
 
+cd nts
+%patch0 -p1 -b .php56
+
 # Sanity check, really often broken
-extver=$(sed -n '/#define PHP_REDIS_VERSION/{s/.* "//;s/".*$//;p}' nts/php_redis.h)
+extver=$(sed -n '/#define PHP_REDIS_VERSION/{s/.* "//;s/".*$//;p}' php_redis.h)
 if test "x${extver}" != "x%{version}"; then
    : Error: Upstream extension version is ${extver}, expecting %{version}.
    exit 1
 fi
+cd ..
 
 %if %{with_zts}
 # duplicate for ZTS build
@@ -79,12 +93,17 @@ cp -pr nts zts
 %endif
 
 # Drop in the bit of configuration
-cat > %{pecl_name}.ini << 'EOF'
+cat > %{ini_name} << 'EOF'
 ; Enable %{pecl_name} extension module
 extension = %{pecl_name}.so
 
 ; phpredis can be used to store PHP sessions. 
 ; To do this, uncomment and configure below
+
+; RPM note : save_handler and save_path are defined
+; for mod_php, in /etc/httpd/conf.d/php.conf
+; for php-fpm, in %{_sysconfdir}/php-fpm.d/*conf
+
 ;session.save_handler = %{pecl_name}
 ;session.save_path = "tcp://host1:6379?weight=1, tcp://host2:6379?weight=2&timeout=2.5, tcp://host3:6379?weight=2"
 EOF
@@ -115,12 +134,12 @@ make %{?_smp_mflags}
 %install
 # Install the NTS stuff
 make -C nts install INSTALL_ROOT=%{buildroot}
-install -D -m 644 %{pecl_name}.ini %{buildroot}%{php_inidir}/%{pecl_name}.ini
+install -D -m 644 %{ini_name} %{buildroot}%{php_inidir}/%{ini_name}
 
 %if %{with_zts}
 # Install the ZTS stuff
 make -C zts install INSTALL_ROOT=%{buildroot}
-install -D -m 644 %{pecl_name}.ini %{buildroot}%{php_ztsinidir}/%{pecl_name}.ini
+install -D -m 644 %{ini_name} %{buildroot}%{php_ztsinidir}/%{ini_name}
 %endif
 
 # Install the package XML file
@@ -157,7 +176,8 @@ sed -e s/testClient/SKIP_testClient/ \
 
 # Launch redis server
 mkdir -p {run,log,lib}/redis
-sed -e "s:/var:$PWD:" \
+sed -e "s:/^pidfile.*$:/pidfile $PWD/run/redis.pid:" \
+    -e "s:/var:$PWD:" \
     -e "/daemonize/s/no/yes/" \
     /etc/redis.conf >redis.conf
 # port number to allow 32/64 build at same time
@@ -183,8 +203,8 @@ ret=0
     TestRedis.php || ret=1
 
 # Cleanup
-if [ -f run/redis/redis.pid ]; then
-   kill $(cat run/redis/redis.pid)
+if [ -f run/redis.pid ]; then
+   kill $(cat run/redis.pid)
 fi
 
 exit $ret
@@ -209,15 +229,21 @@ fi
 %{pecl_xmldir}/%{name}.xml
 
 %{php_extdir}/%{pecl_name}.so
-%config(noreplace) %{php_inidir}/%{pecl_name}.ini
+%config(noreplace) %{php_inidir}/%{ini_name}
 
 %if %{with_zts}
 %{php_ztsextdir}/%{pecl_name}.so
-%config(noreplace) %{php_ztsinidir}/%{pecl_name}.ini
+%config(noreplace) %{php_ztsinidir}/%{ini_name}
 %endif
 
 
 %changelog
+* Thu Apr 24 2014 Remi Collet <rcollet@redhat.com> - 2.2.5-2
+- add numerical prefix to extension configuration file
+- add comment about session configuration
+- fix memory corruption with PHP 5.6
+  https://github.com/nicolasff/phpredis/pull/447
+
 * Wed Mar 19 2014 Remi Collet <remi@fedoraproject.org> - 2.2.5-1
 - Update to 2.2.5
 
