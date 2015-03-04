@@ -1,6 +1,6 @@
 # spec file for php-pecl-redis
 #
-# Copyright (c) 2012-2014 Remi Collet
+# Copyright (c) 2012-2015 Remi Collet
 # License: CC-BY-SA
 # http://creativecommons.org/licenses/by-sa/3.0/
 #
@@ -23,17 +23,14 @@
 
 Summary:       Extension for communicating with the Redis key-value store
 Name:          php-pecl-redis
-Version:       2.2.5
-Release:       5%{?dist}
+Version:       2.2.7
+Release:       1%{?dist}
 License:       PHP
 Group:         Development/Languages
 URL:           http://pecl.php.net/package/redis
 Source0:       http://pecl.php.net/get/%{pecl_name}-%{version}.tgz
 # https://github.com/nicolasff/phpredis/issues/332 - missing tests
-Source1:       https://github.com/nicolasff/phpredis/archive/%{version}.tar.gz
-
-# https://github.com/nicolasff/phpredis/pull/447
-Patch0:        %{pecl_name}-php56.patch
+Source1:       https://github.com/phpredis/phpredis/archive/%{version}.tar.gz
 
 BuildRequires: php-devel
 BuildRequires: php-pecl-igbinary-devel
@@ -42,6 +39,8 @@ BuildRequires: php-pecl-igbinary-devel
 BuildRequires: redis >= 2.6
 %endif
 
+Requires(post): %{__pecl}
+Requires(postun): %{__pecl}
 Requires:      php(zend-abi) = %{php_zend_api}
 Requires:      php(api) = %{php_core_api}
 # php-pecl-igbinary missing php-pecl(igbinary)%{?_isa}
@@ -72,12 +71,11 @@ some doesn't work with an old redis server version.
 %setup -q -c -a 1
 
 # rename source folder
-mv %{pecl_name}-%{version} nts
+mv %{pecl_name}-%{version} NTS
 # tests folder from github archive
-mv phpredis-%{version}/tests nts/tests
+mv phpredis-%{version}/tests NTS/tests
 
-cd nts
-%patch0 -p1 -b .php56
+cd NTS
 
 # Sanity check, really often broken
 extver=$(sed -n '/#define PHP_REDIS_VERSION/{s/.* "//;s/".*$//;p}' php_redis.h)
@@ -89,7 +87,7 @@ cd ..
 
 %if %{with_zts}
 # duplicate for ZTS build
-cp -pr nts zts
+cp -pr NTS ZTS
 %endif
 
 # Drop in the bit of configuration
@@ -110,7 +108,7 @@ EOF
 
 
 %build
-cd nts
+cd NTS
 %{_bindir}/phpize
 %configure \
     --enable-redis \
@@ -120,7 +118,7 @@ cd nts
 make %{?_smp_mflags}
 
 %if %{with_zts}
-cd ../zts
+cd ../ZTS
 %{_bindir}/zts-phpize
 %configure \
     --enable-redis \
@@ -133,20 +131,20 @@ make %{?_smp_mflags}
 
 %install
 # Install the NTS stuff
-make -C nts install INSTALL_ROOT=%{buildroot}
+make -C NTS install INSTALL_ROOT=%{buildroot}
 install -D -m 644 %{ini_name} %{buildroot}%{php_inidir}/%{ini_name}
 
 %if %{with_zts}
 # Install the ZTS stuff
-make -C zts install INSTALL_ROOT=%{buildroot}
+make -C ZTS install INSTALL_ROOT=%{buildroot}
 install -D -m 644 %{ini_name} %{buildroot}%{php_ztsinidir}/%{ini_name}
 %endif
 
 # Install the package XML file
 install -D -m 644 package.xml %{buildroot}%{pecl_xmldir}/%{name}.xml
 
-# Test & Documentation
-cd nts
+# Documentation
+cd NTS
 for i in $(grep 'role="doc"' ../package.xml | sed -e 's/^.*name="//;s/".*$//')
 do install -Dpm 644 $i %{buildroot}%{pecl_docdir}/%{pecl_name}/$i
 done
@@ -167,7 +165,7 @@ done
 %endif
 
 %if %{with_tests}
-cd nts/tests
+cd NTS/tests
 
 # this test requires redis >= 2.6.9
 # https://github.com/nicolasff/phpredis/pull/333
@@ -193,7 +191,7 @@ port=6382
 %endif
 sed -e "s/6379/$port/" -i redis.conf
 sed -e "s/6379/$port/" -i TestRedis.php
-%{_sbindir}/redis-server ./redis.conf
+%{_bindir}/redis-server ./redis.conf
 
 # Run the test Suite
 ret=0
@@ -225,6 +223,7 @@ fi
 
 
 %files
+%{?_licensedir:%license NTS/COPYING}
 %doc %{pecl_docdir}/%{pecl_name}
 %{pecl_xmldir}/%{name}.xml
 
@@ -238,6 +237,9 @@ fi
 
 
 %changelog
+* Tue Mar 03 2015 Remi Collet <remi@fedoraproject.org> - 2.2.7-1
+- Update to 2.2.7 (stable)
+
 * Sun Aug 17 2014 Fedora Release Engineering <rel-eng@lists.fedoraproject.org> - 2.2.5-5
 - Rebuilt for https://fedoraproject.org/wiki/Fedora_21_22_Mass_Rebuild
 
