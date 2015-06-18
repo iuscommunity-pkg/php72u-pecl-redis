@@ -24,7 +24,7 @@
 Summary:       Extension for communicating with the Redis key-value store
 Name:          php-pecl-redis
 Version:       2.2.7
-Release:       1%{?dist}
+Release:       2%{?dist}
 License:       PHP
 Group:         Development/Languages
 URL:           http://pecl.php.net/package/redis
@@ -237,6 +237,9 @@ fi
 
 
 %changelog
+* Thu Jun 18 2015 Fedora Release Engineering <rel-eng@lists.fedoraproject.org> - 2.2.7-2
+- Rebuilt for https://fedoraproject.org/wiki/Fedora_23_Mass_Rebuild
+
 * Tue Mar 03 2015 Remi Collet <remi@fedoraproject.org> - 2.2.7-1
 - Update to 2.2.7 (stable)
 
