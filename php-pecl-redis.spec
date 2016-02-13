@@ -23,6 +23,7 @@ Source0:       http://pecl.php.net/get/%{pecl_name}-%{version}.tgz
 Source1:       https://github.com/phpredis/phpredis/archive/%{version}.tar.gz
 
 BuildRequires: php-devel
+BuildRequires: php-pear
 BuildRequires: php-pecl-igbinary-devel
 # to run Test suite
 %if %{with_tests}
@@ -33,6 +34,7 @@ Requires:      php(zend-abi) = %{php_zend_api}
 Requires:      php(api) = %{php_core_api}
 # php-pecl-igbinary missing php-pecl(igbinary)%{?_isa}
 Requires:      php-pecl-igbinary%{?_isa}
+
 Obsoletes:     php-redis < %{version}
 Provides:      php-redis = %{version}-%{release}
 Provides:      php-redis%{?_isa} = %{version}-%{release}
