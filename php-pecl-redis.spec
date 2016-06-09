@@ -8,19 +8,17 @@
 #
 %global pecl_name   redis
 %global with_zts    0%{?__ztsphp:1}
-%global with_tests  %{?_with_tests:1}%{!?_with_tests:0}
+%global with_tests  0%{?_with_tests:1}
 %global ini_name    50-%{pecl_name}.ini
 
 Summary:       Extension for communicating with the Redis key-value store
 Name:          php-pecl-redis
-Version:       2.2.7
-Release:       4%{?dist}
+Version:       2.2.8
+Release:       1%{?dist}
 License:       PHP
 Group:         Development/Languages
 URL:           http://pecl.php.net/package/redis
 Source0:       http://pecl.php.net/get/%{pecl_name}-%{version}.tgz
-# https://github.com/nicolasff/phpredis/issues/332 - missing tests
-Source1:       https://github.com/phpredis/phpredis/archive/%{version}.tar.gz
 
 BuildRequires: php-devel
 BuildRequires: php-pear
@@ -52,12 +50,15 @@ some doesn't work with an old redis server version.
 
 
 %prep
-%setup -q -c -a 1
+%setup -q -c
+
+# Don't install/register tests
+sed -e 's/role="test"/role="src"/' \
+    -e '/COPYING/s/role="doc"/role="src"/' \
+    -i package.xml
 
 # rename source folder
 mv %{pecl_name}-%{version} NTS
-# tests folder from github archive
-mv phpredis-%{version}/tests NTS/tests
 
 cd NTS
 
@@ -88,6 +89,17 @@ extension = %{pecl_name}.so
 
 ;session.save_handler = %{pecl_name}
 ;session.save_path = "tcp://host1:6379?weight=1, tcp://host2:6379?weight=2&timeout=2.5, tcp://host3:6379?weight=2"
+
+; Configuration
+;redis.arrays.names = ''
+;redis.arrays.hosts = ''
+;redis.arrays.previous = ''
+;redis.arrays.functions = ''
+;redis.arrays.index = ''
+;redis.arrays.autorehash = ''
+;redis.clusters.seeds = ''
+;redis.clusters.timeout = ''
+;redis.clusters.read_timeout = ''
 EOF
 
 
@@ -151,11 +163,6 @@ done
 %if %{with_tests}
 cd NTS/tests
 
-# this test requires redis >= 2.6.9
-# https://github.com/nicolasff/phpredis/pull/333
-sed -e s/testClient/SKIP_testClient/ \
-    -i TestRedis.php
-
 # Launch redis server
 mkdir -p {run,log,lib}/redis
 sed -e "s:/^pidfile.*$:/pidfile $PWD/run/redis.pid:" \
@@ -174,7 +181,7 @@ port=6382
 %endif
 %endif
 sed -e "s/6379/$port/" -i redis.conf
-sed -e "s/6379/$port/" -i TestRedis.php
+sed -e "s/6379/$port/" -i *.php
 %{_bindir}/redis-server ./redis.conf
 
 # Run the test Suite
@@ -197,7 +204,7 @@ exit $ret
 
 
 %files
-%{?_licensedir:%license NTS/COPYING}
+%license NTS/COPYING
 %doc %{pecl_docdir}/%{pecl_name}
 %{pecl_xmldir}/%{name}.xml
 
@@ -211,6 +218,10 @@ exit $ret
 
 
 %changelog
+* Thu Jun  9 2016 Remi Collet <remi@fedoraproject.org> - 2.2.8-1
+- Update to 2.2.8 (stable)
+- don't install/register tests
+
 * Sat Feb 13 2016 Remi Collet <remi@fedoraproject.org> - 2.2.7-4
 - drop scriptlets (replaced by file triggers in php-pear)
 - cleanup
