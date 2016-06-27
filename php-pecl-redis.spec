@@ -13,14 +13,14 @@
 
 Summary:       Extension for communicating with the Redis key-value store
 Name:          php-pecl-redis
-Version:       2.2.8
+Version:       3.0.0
 Release:       1%{?dist}
 License:       PHP
 Group:         Development/Languages
 URL:           http://pecl.php.net/package/redis
 Source0:       http://pecl.php.net/get/%{pecl_name}-%{version}.tgz
 
-BuildRequires: php-devel
+BuildRequires: php-devel > 7
 BuildRequires: php-pear
 BuildRequires: php-pecl-igbinary-devel
 # to run Test suite
@@ -30,8 +30,7 @@ BuildRequires: redis >= 2.6
 
 Requires:      php(zend-abi) = %{php_zend_api}
 Requires:      php(api) = %{php_core_api}
-# php-pecl-igbinary missing php-pecl(igbinary)%{?_isa}
-Requires:      php-pecl-igbinary%{?_isa}
+Requires:      php-igbinary%{?_isa}
 
 Obsoletes:     php-redis < %{version}
 Provides:      php-redis = %{version}-%{release}
@@ -218,6 +217,9 @@ exit $ret
 
 
 %changelog
+* Mon Jun 27 2016 Remi Collet <remi@fedoraproject.org> - 3.0.0-1
+- Update to 3.0.0 (stable)
+
 * Thu Jun  9 2016 Remi Collet <remi@fedoraproject.org> - 2.2.8-1
 - Update to 2.2.8 (stable)
 - don't install/register tests
