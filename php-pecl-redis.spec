@@ -13,14 +13,14 @@
 
 Summary:       Extension for communicating with the Redis key-value store
 Name:          php-pecl-redis
-Version:       3.0.0
-Release:       2%{?dist}
+Version:       3.1.0
+Release:       1%{?dist}
 License:       PHP
 Group:         Development/Languages
 URL:           http://pecl.php.net/package/redis
 Source0:       http://pecl.php.net/get/%{pecl_name}-%{version}.tgz
 
-BuildRequires: php-devel > 7
+BuildRequires: php-devel
 BuildRequires: php-pear
 BuildRequires: php-pecl-igbinary-devel
 # to run Test suite
@@ -163,11 +163,8 @@ done
 cd NTS/tests
 
 # Launch redis server
-mkdir -p {run,log,lib}/redis
-sed -e "s:/^pidfile.*$:/pidfile $PWD/run/redis.pid:" \
-    -e "s:/var:$PWD:" \
-    -e "/daemonize/s/no/yes/" \
-    /etc/redis.conf >redis.conf
+mkdir -p data
+pidfile=$PWD/redis.pid
 # port number to allow 32/64 build at same time
 # and avoid conflict with a possible running server
 %if 0%{?__isa_bits}
@@ -179,9 +176,14 @@ port=6414
 port=6382
 %endif
 %endif
-sed -e "s/6379/$port/" -i redis.conf
 sed -e "s/6379/$port/" -i *.php
-%{_bindir}/redis-server ./redis.conf
+%{_bindir}/redis-server   \
+    --bind      127.0.0.1      \
+    --port      $port          \
+    --daemonize yes            \
+    --logfile   $PWD/redis.log \
+    --dir       $PWD/data      \
+    --pidfile   $pidfile
 
 # Run the test Suite
 ret=0
@@ -191,8 +193,8 @@ ret=0
     TestRedis.php || ret=1
 
 # Cleanup
-if [ -f run/redis.pid ]; then
-   kill $(cat run/redis.pid)
+if [ -f $pidfile ]; then
+   %{_bindir}/redis-cli -p $port shutdown
 fi
 
 exit $ret
@@ -217,6 +219,14 @@ exit $ret
 
 
 %changelog
+* Thu Dec 15 2016 Remi Collet <remi@fedoraproject.org> - 3.1.0-1
+- Update to 3.1.0 (stable)
+- open https://github.com/phpredis/phpredis/issues/1052 max version
+- open https://github.com/phpredis/phpredis/issues/1053 segfault
+- open https://github.com/phpredis/phpredis/issues/1054 warnings
+- open https://github.com/phpredis/phpredis/issues/1055 reflection
+- open https://github.com/phpredis/phpredis/issues/1056 32bits tests
+
 * Mon Nov 14 2016 Remi Collet <remi@fedoraproject.org> - 3.0.0-2
 - rebuild for https://fedoraproject.org/wiki/Changes/php71
 
