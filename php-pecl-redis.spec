@@ -1,6 +1,6 @@
 # Fedora spec file for php-pecl-redis
 #
-# Copyright (c) 2012-2016 Remi Collet
+# Copyright (c) 2012-2017 Remi Collet
 # License: CC-BY-SA
 # http://creativecommons.org/licenses/by-sa/4.0/
 #
@@ -8,12 +8,12 @@
 #
 %global pecl_name   redis
 %global with_zts    0%{?__ztsphp:1}
-%global with_tests  0%{?_with_tests:1}
+%global with_tests  0%{!?_without_tests:1}
 %global ini_name    50-%{pecl_name}.ini
 
 Summary:       Extension for communicating with the Redis key-value store
 Name:          php-pecl-redis
-Version:       3.1.0
+Version:       3.1.1
 Release:       1%{?dist}
 License:       PHP
 Group:         Development/Languages
@@ -165,18 +165,7 @@ cd NTS/tests
 # Launch redis server
 mkdir -p data
 pidfile=$PWD/redis.pid
-# port number to allow 32/64 build at same time
-# and avoid conflict with a possible running server
-%if 0%{?__isa_bits}
-port=$(expr %{__isa_bits} + 6350)
-%else
-%ifarch x86_64
-port=6414
-%else
-port=6382
-%endif
-%endif
-sed -e "s/6379/$port/" -i *.php
+port=$(%{__php} -r 'echo 9000 + PHP_MAJOR_VERSION*100 + PHP_MINOR_VERSION*10 + PHP_INT_SIZE;')
 %{_bindir}/redis-server   \
     --bind      127.0.0.1      \
     --port      $port          \
@@ -184,6 +173,8 @@ sed -e "s/6379/$port/" -i *.php
     --logfile   $PWD/redis.log \
     --dir       $PWD/data      \
     --pidfile   $pidfile
+
+sed -e "s/6379/$port/" -i RedisTest.php
 
 # Run the test Suite
 ret=0
@@ -219,6 +210,10 @@ exit $ret
 
 
 %changelog
+* Wed Feb  1 2017 Remi Collet <remi@fedoraproject.org> - 3.1.1-1
+- Update to 3.1.1 (stable)
+- enable test suite
+
 * Thu Dec 15 2016 Remi Collet <remi@fedoraproject.org> - 3.1.0-1
 - Update to 3.1.0 (stable)
 - open https://github.com/phpredis/phpredis/issues/1052 max version
