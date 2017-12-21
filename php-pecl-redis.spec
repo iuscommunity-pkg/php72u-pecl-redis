@@ -13,8 +13,8 @@
 
 Summary:       Extension for communicating with the Redis key-value store
 Name:          php-pecl-redis
-Version:       3.1.4
-Release:       2%{?dist}
+Version:       3.1.5
+Release:       1%{?dist}
 License:       PHP
 Group:         Development/Languages
 URL:           http://pecl.php.net/package/redis
@@ -210,6 +210,9 @@ exit $ret
 
 
 %changelog
+* Thu Dec 21 2017 Remi Collet <remi@remirepo.net> - 3.1.5-1
+- Update to 3.1.5 (stable)
+
 * Tue Oct 03 2017 Remi Collet <remi@fedoraproject.org> - 3.1.4-2
 - rebuild for https://fedoraproject.org/wiki/Changes/php72
 
