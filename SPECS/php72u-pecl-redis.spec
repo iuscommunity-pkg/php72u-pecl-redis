@@ -1,3 +1,5 @@
+# IUS spec file for php72u-pecl-redis, forked from:
+#
 # Fedora spec file for php-pecl-redis
 #
 # Copyright (c) 2012-2018 Remi Collet
@@ -10,19 +12,20 @@
 %global with_zts    0%{?__ztsphp:1}
 %global with_tests  0%{!?_without_tests:1}
 %global ini_name    50-%{pecl_name}.ini
+%global php       php72u
 
 Summary:       Extension for communicating with the Redis key-value store
-Name:          php-pecl-redis
+Name:          %{php}-pecl-%{pecl_name}
 Version:       3.1.6
-Release:       1%{?dist}
+Release:       1.ius%{?dist}
 License:       PHP
 Group:         Development/Languages
-URL:           http://pecl.php.net/package/redis
+URL:            http://pecl.php.net/package/%{pecl_name}
 Source0:       http://pecl.php.net/get/%{pecl_name}-%{version}.tgz
 
-BuildRequires: php-devel
-BuildRequires: php-pear
-BuildRequires: php-pecl-igbinary-devel
+BuildRequires: %{php}-devel
+BuildRequires: pecl >= 1.10.0
+BuildRequires: %{php}-pecl-igbinary-devel
 # to run Test suite
 %if %{with_tests}
 BuildRequires: redis >= 2.6
@@ -30,13 +33,33 @@ BuildRequires: redis >= 2.6
 
 Requires:      php(zend-abi) = %{php_zend_api}
 Requires:      php(api) = %{php_core_api}
-Requires:      php-igbinary%{?_isa}
+Requires:      %{php}-igbinary%{?_isa}
 
-Obsoletes:     php-redis < %{version}
-Provides:      php-redis = %{version}-%{release}
-Provides:      php-redis%{?_isa} = %{version}-%{release}
-Provides:      php-pecl(%{pecl_name}) = %{version}
-Provides:      php-pecl(%{pecl_name})%{?_isa} = %{version}
+Requires(post): pecl >= 1.10.0
+Requires(postun): pecl >= 1.10.0
+
+# provide the stock name
+Provides:       php-pecl-%{pecl_name} = %{version}
+Provides:       php-pecl-%{pecl_name}%{?_isa} = %{version}
+
+# provide the stock and IUS names without pecl
+Provides:       php-%{pecl_name} = %{version}
+Provides:       php-%{pecl_name}%{?_isa} = %{version}
+Provides:       %{php}-%{pecl_name} = %{version}
+Provides:       %{php}-%{pecl_name}%{?_isa} = %{version}
+
+# provide the stock and IUS names in pecl() format
+Provides:       php-pecl(%{pecl_name}) = %{version}
+Provides:       php-pecl(%{pecl_name})%{?_isa} = %{version}
+Provides:       %{php}-pecl(%{pecl_name}) = %{version}
+Provides:       %{php}-pecl(%{pecl_name})%{?_isa} = %{version}
+
+# conflict with the stock name
+Conflicts:      php-pecl-%{pecl_name} < %{version}
+
+%{?filter_provides_in: %filter_provides_in %{php_extdir}/.*\.so$}
+%{?filter_provides_in: %filter_provides_in %{php_ztsextdir}/.*\.so$}
+%{?filter_setup}
 
 
 %description
@@ -59,7 +82,7 @@ sed -e 's/role="test"/role="src"/' \
 # rename source folder
 mv %{pecl_name}-%{version} NTS
 
-cd NTS
+pushd NTS
 
 # Sanity check, really often broken
 extver=$(sed -n '/#define PHP_REDIS_VERSION/{s/.* "//;s/".*$//;p}' php_redis.h)
@@ -67,7 +90,7 @@ if test "x${extver}" != "x%{version}"; then
    : Error: Upstream extension version is ${extver}, expecting %{version}.
    exit 1
 fi
-cd ..
+popd
 
 %if %{with_zts}
 # duplicate for ZTS build
@@ -79,7 +102,7 @@ cat > %{ini_name} << 'EOF'
 ; Enable %{pecl_name} extension module
 extension = %{pecl_name}.so
 
-; phpredis can be used to store PHP sessions. 
+; phpredis can be used to store PHP sessions.
 ; To do this, uncomment and configure below
 
 ; RPM note : save_handler and save_path are defined
@@ -103,7 +126,7 @@ EOF
 
 
 %build
-cd NTS
+pushd NTS
 %{_bindir}/phpize
 %configure \
     --enable-redis \
@@ -111,9 +134,10 @@ cd NTS
     --enable-redis-igbinary \
     --with-php-config=%{_bindir}/php-config
 make %{?_smp_mflags}
+popd
 
 %if %{with_zts}
-cd ../ZTS
+pushd ZTS
 %{_bindir}/zts-phpize
 %configure \
     --enable-redis \
@@ -121,6 +145,7 @@ cd ../ZTS
     --enable-redis-igbinary \
     --with-php-config=%{_bindir}/zts-php-config
 make %{?_smp_mflags}
+popd
 %endif
 
 
@@ -136,13 +161,14 @@ install -D -m 644 %{ini_name} %{buildroot}%{php_ztsinidir}/%{ini_name}
 %endif
 
 # Install the package XML file
-install -D -m 644 package.xml %{buildroot}%{pecl_xmldir}/%{name}.xml
+install -D -m 644 package.xml %{buildroot}%{pecl_xmldir}/%{pecl_name}.xml
 
 # Documentation
-cd NTS
+pushd NTS
 for i in $(grep 'role="doc"' ../package.xml | sed -e 's/^.*name="//;s/".*$//')
 do install -Dpm 644 $i %{buildroot}%{pecl_docdir}/%{pecl_name}/$i
 done
+popd
 
 
 %check
@@ -160,12 +186,13 @@ done
 %endif
 
 %if %{with_tests}
-cd NTS/tests
+pushd NTS/tests
 
 # Launch redis server
 mkdir -p data
 pidfile=$PWD/redis.pid
-port=$(%{__php} -r 'echo 9000 + PHP_MAJOR_VERSION*100 + PHP_MINOR_VERSION*10 + PHP_INT_SIZE;')
+# use a random port to avoid conflicts
+port=%(shuf -i 6000-6999 -n 1)
 %{_bindir}/redis-server   \
     --bind      127.0.0.1      \
     --port      $port          \
@@ -195,10 +222,19 @@ exit $ret
 %endif
 
 
+%post
+%{pecl_install} %{pecl_xmldir}/%{pecl_name}.xml >/dev/null || :
+
+
+%postun
+if [ $1 -eq 0 ]; then
+    %{pecl_uninstall} %{pecl_name} >/dev/null || :
+fi
+
 %files
 %license NTS/COPYING
 %doc %{pecl_docdir}/%{pecl_name}
-%{pecl_xmldir}/%{name}.xml
+%{pecl_xmldir}/%{pecl_name}.xml
 
 %{php_extdir}/%{pecl_name}.so
 %config(noreplace) %{php_inidir}/%{ini_name}
@@ -210,6 +246,9 @@ exit $ret
 
 
 %changelog
+* Fri Jan 26 2018 Ben Harper <ben.harper@rackspace.com> - 3.1.6-1.ius
+- port from Fedora
+
 * Wed Jan  3 2018 Remi Collet <remi@remirepo.net> - 3.1.6-1
 - Update to 3.1.6 (stable)
 
