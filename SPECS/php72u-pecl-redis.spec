@@ -9,10 +9,11 @@
 # Please, preserve the changelog entries
 #
 %global pecl_name   redis
-%global with_zts    0%{?__ztsphp:1}
-%global with_tests  0%{!?_without_tests:1}
 %global ini_name    50-%{pecl_name}.ini
-%global php       php72u
+%global php         php72u
+
+%bcond_without zts
+%bcond_without tests
 
 Summary:       Extension for communicating with the Redis key-value store
 Name:          %{php}-pecl-%{pecl_name}
@@ -20,14 +21,14 @@ Version:       3.1.6
 Release:       1.ius%{?dist}
 License:       PHP
 Group:         Development/Languages
-URL:            http://pecl.php.net/package/%{pecl_name}
-Source0:       http://pecl.php.net/get/%{pecl_name}-%{version}.tgz
+URL:           https://pecl.php.net/package/%{pecl_name}
+Source0:       https://pecl.php.net/get/%{pecl_name}-%{version}.tgz
 
 BuildRequires: %{php}-devel
 BuildRequires: pecl >= 1.10.0
 BuildRequires: %{php}-pecl-igbinary-devel
 # to run Test suite
-%if %{with_tests}
+%if %{with tests}
 BuildRequires: redis >= 2.6
 %endif
 
@@ -82,17 +83,14 @@ sed -e 's/role="test"/role="src"/' \
 # rename source folder
 mv %{pecl_name}-%{version} NTS
 
-pushd NTS
-
 # Sanity check, really often broken
-extver=$(sed -n '/#define PHP_REDIS_VERSION/{s/.* "//;s/".*$//;p}' php_redis.h)
+extver=$(sed -n '/#define PHP_REDIS_VERSION/{s/.* "//;s/".*$//;p}' NTS/php_redis.h)
 if test "x${extver}" != "x%{version}"; then
    : Error: Upstream extension version is ${extver}, expecting %{version}.
    exit 1
 fi
-popd
 
-%if %{with_zts}
+%if %{with zts}
 # duplicate for ZTS build
 cp -pr NTS ZTS
 %endif
@@ -133,10 +131,10 @@ pushd NTS
     --enable-redis-session \
     --enable-redis-igbinary \
     --with-php-config=%{_bindir}/php-config
-make %{?_smp_mflags}
+%make_build
 popd
 
-%if %{with_zts}
+%if %{with zts}
 pushd ZTS
 %{_bindir}/zts-phpize
 %configure \
@@ -144,7 +142,7 @@ pushd ZTS
     --enable-redis-session \
     --enable-redis-igbinary \
     --with-php-config=%{_bindir}/zts-php-config
-make %{?_smp_mflags}
+%make_build
 popd
 %endif
 
@@ -154,7 +152,7 @@ popd
 make -C NTS install INSTALL_ROOT=%{buildroot}
 install -D -m 644 %{ini_name} %{buildroot}%{php_inidir}/%{ini_name}
 
-%if %{with_zts}
+%if %{with zts}
 # Install the ZTS stuff
 make -C ZTS install INSTALL_ROOT=%{buildroot}
 install -D -m 644 %{ini_name} %{buildroot}%{php_ztsinidir}/%{ini_name}
@@ -164,11 +162,9 @@ install -D -m 644 %{ini_name} %{buildroot}%{php_ztsinidir}/%{ini_name}
 install -D -m 644 package.xml %{buildroot}%{pecl_xmldir}/%{pecl_name}.xml
 
 # Documentation
-pushd NTS
-for i in $(grep 'role="doc"' ../package.xml | sed -e 's/^.*name="//;s/".*$//')
-do install -Dpm 644 $i %{buildroot}%{pecl_docdir}/%{pecl_name}/$i
+for i in $(grep 'role="doc"' package.xml | sed -e 's/^.*name="//;s/".*$//')
+do install -D -p -m 644 NTS/$i %{buildroot}%{pecl_docdir}/%{pecl_name}/$i
 done
-popd
 
 
 %check
@@ -178,14 +174,14 @@ popd
     --define extension=%{buildroot}%{php_extdir}/%{pecl_name}.so \
     --modules | grep %{pecl_name}
 
-%if %{with_zts}
+%if %{with zts}
 %{__ztsphp} --no-php-ini \
     --define extension=igbinary.so \
     --define extension=%{buildroot}%{php_ztsextdir}/%{pecl_name}.so \
     --modules | grep %{pecl_name}
 %endif
 
-%if %{with_tests}
+%if %{with tests}
 pushd NTS/tests
 
 # Launch redis server
@@ -215,6 +211,7 @@ if [ -f $pidfile ]; then
    %{_bindir}/redis-cli -p $port shutdown
 fi
 
+popd
 exit $ret
 
 %else
@@ -231,6 +228,7 @@ if [ $1 -eq 0 ]; then
     %{pecl_uninstall} %{pecl_name} >/dev/null || :
 fi
 
+
 %files
 %license NTS/COPYING
 %doc %{pecl_docdir}/%{pecl_name}
@@ -239,7 +237,7 @@ fi
 %{php_extdir}/%{pecl_name}.so
 %config(noreplace) %{php_inidir}/%{ini_name}
 
-%if %{with_zts}
+%if %{with zts}
 %{php_ztsextdir}/%{pecl_name}.so
 %config(noreplace) %{php_ztsinidir}/%{ini_name}
 %endif
